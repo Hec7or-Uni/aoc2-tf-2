@@ -13,9 +13,10 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 entity MIPs_segmentado is
-    Port ( clk : in  STD_LOGIC;
-           reset : in  STD_LOGIC;
-			  output : out  STD_LOGIC_VECTOR (31 downto 0));
+    Port (clk : in  STD_LOGIC;
+          reset : in  STD_LOGIC;
+		  IO_input: in STD_LOGIC_VECTOR (31 downto 0);
+		  output : out  STD_LOGIC_VECTOR (31 downto 0));
 end MIPs_segmentado;
 
 architecture Behavioral of MIPs_segmentado is
@@ -50,13 +51,17 @@ component mux2_1 is
           Dout : out  STD_LOGIC_VECTOR (31 downto 0));
 end component;
 
-component memoriaRAM_D is port (
-		  CLK : in std_logic;
-		  ADDR : in std_logic_vector (31 downto 0); --Dir 
-          Din : in std_logic_vector (31 downto 0); --entrada de datos para el puerto de escritura
-          WE : in std_logic;		-- write enable	
-		  RE : in std_logic;		-- read enable		  
-		  Dout : out std_logic_vector (31 downto 0));
+component MD_mas_MC is port (
+	CLK : in std_logic;
+	reset: in std_logic; 
+	ADDR : in std_logic_vector (31 downto 0); --Dir solicitada por el Mips
+	Din : in std_logic_vector (31 downto 0);	--entrada de datos desde el Mips
+	WE : in std_logic;	-- write enable	del MIPS
+	RE : in std_logic;	-- read enable del MIPS	
+	IO_input: in std_logic_vector (31 downto 0);	--dato que viene de una entrada del sistema
+	Mem_ready: out std_logic;	-- indica si podemos hacer la operación solicitada en el ciclo actual
+	Dout : out std_logic_vector (31 downto 0)	--dato que se envía al Mips
+		  ); 
 end component;
 
 component memoriaRAM_I is port (
@@ -342,6 +347,9 @@ signal load_EX_FP : std_logic;
 signal Kill_IF, Parar_ID, Parar_EX_FP, load_IF_ID, PEFP, PID, KIF : std_logic;
 signal IR_KILL: std_logic_vector(31 downto 0);
 signal paradas_control, paradas_datos, paradas_fp, ciclos: std_logic_vector(7 downto 0);
+signal Mem_ready : std_logic;
+signal paradas_mem: std_logic_vector(7 downto 0); 
+signal inc_paradas_mem : std_logic; 
 begin
 count_clk: counter port map (clk => clk, reset => reset, count_enable => '1', load => '0', D_in => "00000000", count => ciclos);
 
@@ -352,13 +360,15 @@ PEFP	<= '1' when parar_EX_FP = '1' else '0';
 count_paradas: counter port map (clk => clk, reset => reset, count_enable => KIF, load => '0', D_in => "00000000", count => paradas_control);
 count_datos: counter port map (clk => clk, reset => reset, count_enable => PID, load => '0', D_in => "00000000", count => paradas_datos);
 count_fp: counter port map (clk => clk, reset => reset, count_enable => PEFP, load => '0', D_in => "00000000", count => paradas_fp);
+cont_paradas_memoria: counter port map (clk => clk, reset => reset, count_enable => inc_paradas_mem , load=> '0', D_in => "00000000", count => paradas_mem);
+
 
 pc: reg32 port map ( Din => PC_in, clk => clk, reset => reset, load => load_PC, Dout => PC_out );
 ------------------------------------------------------------------------------------
 -- vale '1' porque en esta versión base el procesador no para nunca
 -- Si queremos detener una instrucción en la etapa fetch habrá que ponerlo a '0'
 -- load_PC <= '1';
-load_PC <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else '1';
+load_PC <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else '1';
 ------------------------------------------------------------------------------------
 four <= "00000000000000000000000000000100";
 cero <= "00000000000000000000000000000000";
@@ -372,7 +382,7 @@ muxPC: mux2_1 port map (Din0 => PC4, DIn1 => Dirsalto_ID, ctrl => PCSrc, Dout =>
 Mem_I: memoriaRAM_I PORT MAP (CLK => CLK, ADDR => PC_out, Din => cero, WE => '0', RE => '1', Dout => IR_in);
 ------------------------------------------------------------------------------------
 -- el load vale uno porque este procesador no para nunca. Si queremos que una instrucción no avance habrá que poner el load a '0'
-load_IF_ID <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else '1';
+load_IF_ID <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else '1';
 IR_KILL <= cero when Kill_IF = '1' else IR_in;
 Banco_IF_ID: Banco_ID port map ( IR_in => IR_KILL, PC4_in => PC4, clk => clk, reset => reset, load => load_IF_ID, IR_ID => IR_ID, PC4_ID => PC4_ID);
 ------------------------------------------Etapa ID-------------------------------------------------------------------
@@ -417,11 +427,11 @@ UC_seg: UC port map (IR_op_code => IR_op_code, Branch => Branch, RegDst => RegDs
 -- Pero este MIPS base no para: tenéis que cambiarlo al completar y conectar la UD.
 -- Os dejamos una pista en este código
 
-RegWrite_FP_ID	<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else RegWrite_FP;
-RegWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else RegWrite;
-FP_add_ID				<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else FP_add;
-MemWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else MemWrite;
-MemRead_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else MemRead;
+RegWrite_FP_ID	<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else RegWrite_FP;
+RegWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else RegWrite;
+FP_add_ID				<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else FP_add;
+MemWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else MemWrite;
+MemRead_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else MemRead;
 -------------------------------------------------------------------------------------
 -- Si es una instrucción de salto y se activa la señal Z se carga la dirección de salto, sino PC+4 	
 PCSrc <= Branch AND Z; 				
@@ -452,7 +462,7 @@ Banco_ID_EX_FP: Banco_EX_FP PORT MAP ( 	clk => clk, reset => reset, load => load
 					Reg_Rt_FP_ID => IR_ID(20 downto 16), Reg_Rt_FP_EX => Reg_Rt_FP_EX,
 					RegDst_ID => RegDst_ID, RegDst_FP_EX => RegDst_FP_EX);		
 
-load_EX_FP <= '0' when Parar_EX_FP = '1' else '1';
+load_EX_FP <= '0' when Parar_EX_FP = '1' or Mem_ready = '0' else '1';
 ------------------------------------------Etapa EX-------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 -- Unidad de anticipación de enteros incompleta. Ahora mismo selecciona siempre la entrada 0
@@ -510,7 +520,7 @@ Banco_EX_FP_MEM: Banco_MEM_FP PORT MAP ( 	ADD_FP_out => ADD_FP_out, ADD_FP_out_M
 RegWrite_FP_EX_mux_out <= '0' when Parar_EX_FP = '1' else RegWrite_FP_EX;
 ------------------------------------------Etapa MEM-------------------------------------------------------------------
 
-Mem_D: memoriaRAM_D PORT MAP (CLK => CLK, ADDR => ALU_out_MEM, Din => BusB_MEM, WE => MemWrite_MEM, RE => MemRead_MEM, Dout => Mem_out);
+Mem_D: MD_mas_MC PORT MAP (CLK => CLK, ADDR => ALU_out_MEM, Din => BusB_MEM, WE => MemWrite_MEM, RE => MemRead_MEM, reset => reset, IO_input => IO_input, Mem_ready => Mem_ready, Dout => Mem_out);
 
 Banco_MEM_WB: Banco_WB PORT MAP ( ALU_out_MEM => ALU_out_MEM, ALU_out_WB => ALU_out_WB, Mem_out => Mem_out, MDR => MDR, clk => clk, reset => reset, 
 				load => '1', 
