@@ -69,7 +69,7 @@ component counter_2bits is
 	);
 end component;		           
 -- Ejemplos de nombres de estado. Poned los vuestros. Nombrad a vuestros estados con nombres descriptivos. As� se facilita la depuraci�n
-type state_type is (Inicio, Direccion, Datos); 
+type state_type is (Inicio, single_word_transfer_addr, single_word_transfer_data); 
 signal state, next_state : state_type; 
 signal last_word_block: STD_LOGIC; --se activa cuando se est� pidiendo la �ltima palabra de un bloque
 signal one_word: STD_LOGIC; --se activa cuando s�lo se quiere transferir una palabra
@@ -120,59 +120,19 @@ palabra <= palabra_UC;
 		one_word <= '0';
 		mux_output <= '0';
 		last_word <= '0';
-
-		case state is
-			when Inicio =>-- Estado Inicio  
-				if (RE = '0' and WE = '0') then -- si no piden nada no hacemos nada
-					next_state <= Inicio;
-					ready <= '1';
-				elsif (RE = '1' and  hit = '1') then -- si piden y es acierto de lectura mandamos el dato
-					next_state <= Inicio;
-					ready <= '1';
-					mux_output <= '0'; --Es el valor por defecto. No hace falta ponerlo. Salida de la MC
-				elsif (Bus_grant = '0') then
-					next_state <= Direccion;
-				elsif ((RE = '1' and hit = '0') or WE = '1') then
-					Bus_req <=1
-				end if;
-
-			when Direccion =>
-				-- transiciones
-				if (Bus_DevSel = '0') then
-					next_state <= Direccion;
-				elsif (Bus_DevSel = '1') then
-					next_state <= Datos;
-				end if;
-				-- salidas del estado
-				if (WE = '1') then 
-					MC_bus_Rd_Wr <= '1'
-				end if;
-				Frame <= '1';
-				MC_send_addr_ctrl <= '1';
-
-				when Datos =>
-				-- transiciones
-				if (last_word = '0') then
-					next_state <= Datos;
-				elsif (last_word = '1') then
-					next_state <= Inicio;
-					ready <= '1';
-				end if;
-
-				-- salidas del estado
-				block_addr <= '1' when addr_non_cacheable = '0' and RE = '1' and hit = '0' then '0';
-				last_word  <= '1' when last_word_block    = '1' then '0';
-				MC_tags_WE <= '1' when last_word_block    = '1' then '0'; 
-				MC_send_data <= '1' when WE = '1' then '0';
-				if (hit0 = '1' and WE = '1') then
-					MC_WE0 <= '1' 
-				elsif (hit1 = '1' and WE = '1') then
-					MC_WE1 <= '1' 
-				end if;
-				Frame <= '1';
 				
-		end case;
+		-- Estado Inicio          
+		if (state = Inicio and RE= '0' and WE= '0') then -- si no piden nada no hacemos nada
+			next_state <= Inicio;
+			ready <= '1';
+		elsif (state = Inicio and RE= '1' and  hit='1') then -- si piden y es acierto de lectura mandamos el dato
+			next_state <= Inicio;
+			ready <= '1';
+			mux_output <= '0'; --Es el valor por defecto. No hace falta ponerlo. Salida de la MC
+		elsif --poner el resto de casos. No escrib�is nada, hasta tener una m�quina de estados bien definida
+		
+		end if;
+		
   end process;
 end Behavioral;
 
--- me tienes que contar lo de bases
