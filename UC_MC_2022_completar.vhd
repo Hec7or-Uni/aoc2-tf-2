@@ -160,19 +160,22 @@ palabra <= palabra_UC;
 				end if;
 
 				-- salidas del estado
-				block_addr <= '1' when addr_non_cacheable = '0' and RE = '1' and hit = '0' then '0';
-				last_word  <= '1' when last_word_block    = '1' then '0';
-				MC_tags_WE <= '1' when last_word_block    = '1' then '0'; 
-				MC_send_data <= '1' when WE = '1' then '0';
-				if (hit0 = '1' and WE = '1') then
-					MC_WE0 <= '1' 
-				elsif (hit1 = '1' and WE = '1') then
-					MC_WE1 <= '1' 
+
+				--AÑADIR BUSTREADY¿?
+				if (RE = '1') then
+					block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' then '0';
+					MC_tags_WE <= '1' when last_word_block    = '1' then '0';
+
+				elsif (WE = '1') then
+					MC_send_data <= '1';
+					if (hit0 = '1') then
+						MC_WE0 <= '1'; 
+					elsif (hit1 = '1') then
+						MC_WE1 <= '1'; 
 				end if;
+				last_word  <= last_word_block;
 				Frame <= '1';
 				
 		end case;
   end process;
 end Behavioral;
-
--- me tienes que contar lo de bases
