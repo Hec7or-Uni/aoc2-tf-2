@@ -151,8 +151,11 @@ palabra <= palabra_UC;
 				MC_bus_Rd_Wr <= WE;
 				Frame <= '1';
 				MC_send_addr_ctrl <= '1';
-				block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' and RE = '1' else '0';
 				
+				if (addr_non_cacheable = '0' and hit = '0' and RE = '1') then block_addr <= '1';
+				else block_addr <= '0';
+				end if;
+								
 				-- transiciones
 				if (Bus_DevSel = '0') then
 					next_state <= Direccion;

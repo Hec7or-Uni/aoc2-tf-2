@@ -22,9 +22,9 @@
           
   -- Clock period definitions
    constant CLK_period : time := 10 ns;
-	
-  BEGIN
 	IO_input <= x"00ABCDEF";
+  BEGIN
+
   -- Component Instantiation
    uut: MIPs_segmentado PORT MAP(clk => clk, reset => reset, IO_input=>IO_input, output => output);
 	
