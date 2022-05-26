@@ -356,6 +356,7 @@ count_clk: counter port map (clk => clk, reset => reset, count_enable => '1', lo
 KIF 	<= '1' when Kill_IF = '1' and parar_ID = '0' and parar_EX_FP = '0' else '0';
 PID 	<= '1' when parar_ID = '1' and parar_EX_FP = '0' else '0';
 PEFP	<= '1' when parar_EX_FP = '1' else '0';
+inc_paradas_mem <= not Mem_ready;
 
 count_paradas: counter port map (clk => clk, reset => reset, count_enable => KIF, load => '0', D_in => "00000000", count => paradas_control);
 count_datos: counter port map (clk => clk, reset => reset, count_enable => PID, load => '0', D_in => "00000000", count => paradas_datos);
@@ -432,6 +433,12 @@ RegWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0'
 FP_add_ID				<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else FP_add;
 MemWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else MemWrite;
 MemRead_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else MemRead;
+RegWrite_EX1		<= '0' when Mem_ready = '0' else RegWrite_EX;
+RegWrite_FP_EX1		<= '0' when Mem_ready = '0' else RegWrite_FP_EX;
+RegWrite_MEM1		<= '0' when Mem_ready = '0' else RegWrite_MEM;
+RegWrite_FP_MEM1	<= '0' when Mem_ready = '0' else RegWrite_FP_MEM;
+RegWrite_WB1		<= '0' when Mem_ready = '0' else RegWrite_WB;
+RegWrite_FP_WB1		<= '0' when Mem_ready = '0' else RegWrite_FP_WB;
 -------------------------------------------------------------------------------------
 -- Si es una instrucción de salto y se activa la señal Z se carga la dirección de salto, sino PC+4 	
 PCSrc <= Branch AND Z; 				
@@ -453,7 +460,7 @@ Banco_ID_EX: Banco_EX PORT MAP ( 	clk => clk, reset => reset, load => load_EX_FP
 					Reg_Rt_ID => IR_ID(20 downto 16), Reg_Rd_ID => IR_ID(15 downto 11), Reg_Rt_EX => Reg_Rt_EX, Reg_Rd_EX => Reg_Rd_EX);		
 -- Extensión banco ID/EX para FP
 Banco_ID_EX_FP: Banco_EX_FP PORT MAP ( 	clk => clk, reset => reset, load => load_EX_FP, 
-					RegWrite_FP_ID => RegWrite_FP_ID, RegWrite_FP_EX => RegWrite_FP_EX,
+					RegWrite_FP_ID => RegWrite_FP_ID, RegWrite_FP_EX => RegWrite_FP_EX1,
 					FP_add_ID => FP_add_ID, FP_add_EX => FP_add_EX,
 					FP_mem_ID => FP_mem, FP_mem_EX => FP_mem_EX,
 					busA_FP => busA_FP, busB_FP => busB_FP, busA_FP_EX => busA_FP_EX, busB_FP_EX => busB_FP_EX,	
@@ -502,8 +509,8 @@ mux_dst_FP: mux2_5bits port map (Din0 => Reg_Rt_FP_EX, DIn1 => Reg_Rd_FP_EX, ctr
 
 
 Banco_EX_MEM: Banco_MEM PORT MAP ( ALU_out_EX => ALU_out_EX, ALU_out_MEM => ALU_out_MEM, clk => clk, reset => reset, load => '1', MemWrite_EX => MemWrite_EX,
-		MemRead_EX => MemRead_EX, MemtoReg_EX => MemtoReg_EX, RegWrite_EX => RegWrite_EX, MemWrite_MEM => MemWrite_MEM, MemRead_MEM => MemRead_MEM,
-		MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM, 
+		MemRead_EX => MemRead_EX, MemtoReg_EX => MemtoReg_EX, RegWrite_EX => RegWrite_EX1, MemWrite_MEM => MemWrite_MEM, MemRead_MEM => MemRead_MEM,
+		MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM1, 
 	-- Si metemos cortos lo que hay que guardar aquí no es el registro B, sino la salida de la red de cortos
 	-- Además hay dos RBs, hay que elegir el que toque con el mux que usa FP_mem
 	BusB_EX => BusB_4_MD,
@@ -512,7 +519,7 @@ Banco_EX_MEM: Banco_MEM PORT MAP ( ALU_out_EX => ALU_out_EX, ALU_out_MEM => ALU_
 --Extensión para instrucciones de FP
 
 Banco_EX_FP_MEM: Banco_MEM_FP PORT MAP ( 	ADD_FP_out => ADD_FP_out, ADD_FP_out_MEM => ADD_FP_out_MEM, clk => clk, reset => reset, load => '1', 
-						RegWrite_FP_EX => RegWrite_FP_EX_mux_out, RegWrite_FP_MEM => RegWrite_FP_MEM, 
+						RegWrite_FP_EX => RegWrite_FP_EX_mux_out, RegWrite_FP_MEM => RegWrite_FP_MEM1, 
 						FP_mem_EX => FP_mem_EX, FP_mem_MEM => FP_mem_MEM,
 						RW_FP_EX => RW_FP_EX, RW_FP_MEM => RW_FP_MEM);
 
@@ -524,15 +531,15 @@ Mem_D: MD_mas_MC PORT MAP (CLK => CLK, ADDR => ALU_out_MEM, Din => BusB_MEM, WE 
 
 Banco_MEM_WB: Banco_WB PORT MAP ( ALU_out_MEM => ALU_out_MEM, ALU_out_WB => ALU_out_WB, Mem_out => Mem_out, MDR => MDR, clk => clk, reset => reset, 
 				load => '1', 
-				MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM, MemtoReg_WB => MemtoReg_WB, RegWrite_WB => RegWrite_WB, 
+				MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM1, MemtoReg_WB => MemtoReg_WB, RegWrite_WB => RegWrite_WB1, 
 				RW_MEM => RW_MEM, RW_WB => RW_WB );
 
 --
 Banco_MEM_WB_FP: Banco_WB_FP PORT MAP ( 	ADD_FP_out_MEM	=> ADD_FP_out_MEM, 
 						ADD_FP_out_WB	=> ADD_FP_out_WB, 
 						clk => clk, reset => reset, load => '1', 
-						RegWrite_FP_MEM => RegWrite_FP_MEM, 
-						RegWrite_FP_WB => RegWrite_FP_WB,
+						RegWrite_FP_MEM => RegWrite_FP_MEM1, 
+						RegWrite_FP_WB => RegWrite_FP_WB1,
 						FP_mem_MEM => FP_mem_MEM, 
 						FP_mem_WB => FP_mem_WB, 
 						RW_FP_MEM => RW_FP_MEM, 
