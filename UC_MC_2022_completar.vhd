@@ -145,7 +145,8 @@ palabra <= palabra_UC;
 					next_state <= Inicio;
 				else then
 					next_state <= Datos;
-					block_addr <= '0';
+					--block_addr <= '0';
+					--no se de donde ha salido ¿?
 				end if;
 				-- salidas del estado
 				if (WE = '1') then 
@@ -153,6 +154,7 @@ palabra <= palabra_UC;
 				end if;
 				Frame <= '1';
 				MC_send_addr_ctrl <= '1';
+				block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' and RE = '1' then '0';
 
 			when Datos =>
 				-- transiciones
@@ -169,7 +171,6 @@ palabra <= palabra_UC;
 
 				-- salidas del estado
 				if (RE = '1' and bus_TRDY = '1') then
-					block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' then '0';
 					inc_m <= '1' when hit = '0' then '0';
 					MC_tags_WE <= last_word_block;
 					mux_origen <= 1; --seleciona bus
