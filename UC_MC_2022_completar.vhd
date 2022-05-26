@@ -150,7 +150,7 @@ palabra <= palabra_UC;
 				Frame <= '1';
 				MC_send_addr_ctrl <= '1';
 
-				when Datos =>
+			when Datos =>
 				-- transiciones
 				if (last_word = '0') then
 					next_state <= Datos;
