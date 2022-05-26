@@ -76,8 +76,11 @@ signal one_word: STD_LOGIC; --se activa cuando s�lo se quiere transferir una p
 signal count_enable: STD_LOGIC; -- se activa si se ha recibido una palabra de un bloque para que se incremente el contador de palabras
 signal hit: std_logic;
 signal palabra_UC : STD_LOGIC_VECTOR (1 downto 0);
+signal duplw: std_logic;
 begin
- 
+
+
+
 hit <= hit0 or hit1;	
  
 --el contador nos dice cuantas palabras hemos recibido. Se usa para saber cuando se termina la transferencia del bloque y para direccionar la palabra en la que se escribe el dato leido del bus en la MC
@@ -120,7 +123,7 @@ palabra <= palabra_UC;
 		one_word <= '0';
 		mux_output <= '0';
 		last_word <= '0';
-
+		duplw <= '0';
 		case state is
 			when Inicio =>-- Estado Inicio  
 				if (RE = '0' and WE = '0') then -- si no piden nada no hacemos nada
@@ -131,7 +134,7 @@ palabra <= palabra_UC;
 					ready <= '1';
 					mux_output <= '0'; --Es el valor por defecto. No hace falta ponerlo. Salida de la MC
 				elsif ((RE = '1' and hit = '0') or WE = '1') then
-					Bus_req <=1;
+					Bus_req <= '1';
 					if (Bus_grant = '1') then
 						next_state <= Direccion;
 						inc_w <= WE;
@@ -148,7 +151,7 @@ palabra <= palabra_UC;
 				MC_bus_Rd_Wr <= WE;
 				Frame <= '1';
 				MC_send_addr_ctrl <= '1';
-				block_addr <= (addr_non_cacheable = '0' and hit = '0' and RE = '1');
+				block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' and RE = '1' else '0';
 				
 				-- transiciones
 				if (Bus_DevSel = '0') then
@@ -162,29 +165,32 @@ palabra <= palabra_UC;
 				-- salidas del estado
 				if (RE = '1' and bus_TRDY = '1' and addr_non_cacheable = '0') then
 					last_word  <= last_word_block;
+					duplw  <= last_word_block;
 					MC_tags_WE <= last_word_block;
-					mux_origen <= 1; --seleciona bus
-					mux_output <= 0; --out memoria cache
+					mux_origen <= '1'; --seleciona bus
+					mux_output <= '0'; --out memoria cache
 					MC_WE0 <= not via_2_rpl;
 					MC_WE1 <= via_2_rpl;
 
 				elsif (RE = '1' and bus_TRDY = '1' and addr_non_cacheable = '1') then
-					last_word  <= 1;
-					mux_origen <= 0; --seleciona procesador
-					mux_output <= 1; --out bus
+					last_word  <= '1';
+					duplw <= '1';
+					mux_origen <= '0'; --seleciona procesador
+					mux_output <= '1'; --out bus
 					
 				elsif (WE = '1' and bus_TRDY = '1') then
 					MC_send_data <= '1';
-					last_word  <= 1;
-					mux_origen <= 0; --seleciona procesador
+					last_word  <= '1';
+					duplw <= '1';
+					mux_origen <= '0'; --seleciona procesador
 
 				end if;
 				Frame <= '1';
 				
 				-- transiciones
-				if (last_word = '0' or bus_TRDY = '0') then
+				if (duplw = '0' or bus_TRDY = '0') then
 					next_state <= Datos;
-				elsif (last_word = '1' and bus_TRDY = '1') then
+				elsif (duplw = '1' and bus_TRDY = '1') then
 					next_state <= Inicio;
 					ready <= '1';
 				end if;

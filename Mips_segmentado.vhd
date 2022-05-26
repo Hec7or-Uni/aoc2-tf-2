@@ -350,6 +350,14 @@ signal paradas_control, paradas_datos, paradas_fp, ciclos: std_logic_vector(7 do
 signal Mem_ready : std_logic;
 signal paradas_mem: std_logic_vector(7 downto 0); 
 signal inc_paradas_mem : std_logic; 
+
+signal RegWrite_EX1 : std_logic; 
+signal RegWrite_FP_EX1 : std_logic; 
+signal RegWrite_MEM1 : std_logic; 
+signal RegWrite_FP_MEM1 : std_logic; 
+signal RegWrite_WB1 : std_logic; 
+signal RegWrite_FP_WB1 : std_logic; 
+
 begin
 count_clk: counter port map (clk => clk, reset => reset, count_enable => '1', load => '0', D_in => "00000000", count => ciclos);
 
