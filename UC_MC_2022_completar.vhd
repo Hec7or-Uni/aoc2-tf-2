@@ -133,15 +133,19 @@ palabra <= palabra_UC;
 				elsif (Bus_grant = '0') then
 					next_state <= Direccion;
 				elsif ((RE = '1' and hit = '0') or WE = '1') then
-					Bus_req <=1
+					Bus_req <=1;
+					next_state <= Inicio;
 				end if;
 
 			when Direccion =>
 				-- transiciones
 				if (Bus_DevSel = '0') then
 					next_state <= Direccion;
-				elsif (Bus_DevSel = '1') then
+				elsif (Bus_DevSel = '1' and addr_non_cacheable = '0') then --asegurar que es no cacheable
+					next_state <= Inicio;
+				else then
 					next_state <= Datos;
+					block_addr <= '0';
 				end if;
 				-- salidas del estado
 				if (WE = '1') then 
@@ -152,26 +156,41 @@ palabra <= palabra_UC;
 
 			when Datos =>
 				-- transiciones
-				if (last_word = '0') then
+				if (last_word = '0' or bus_TRDY = '0') then
 					next_state <= Datos;
 				elsif (last_word = '1') then
 					next_state <= Inicio;
+					if(RE = '1') then
+						mux_origen <= 1; --seleciona bus
+						mux_output <= 0; --out memoria cache
+					end if;
 					ready <= '1';
 				end if;
 
 				-- salidas del estado
-
-				--AÑADIR BUSTREADY¿?
-				if (RE = '1') then
+				if (RE = '1' and bus_TRDY = '1') then
 					block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' then '0';
-					MC_tags_WE <= '1' when last_word_block    = '1' then '0';
+					inc_m <= '1' when hit = '0' then '0';
+					MC_tags_WE <= last_word_block;
+					mux_origen <= 1; --seleciona bus
+					mux_output <= 0; --out memoria cache
 
-				elsif (WE = '1') then
+				elsif (WE = '1' and bus_TRDY = '1' and hit = '1') then
+					MC_WE0 <= hit0; 
+					MC_WE1 <= hit1;
 					MC_send_data <= '1';
-					if (hit0 = '1') then
-						MC_WE0 <= '1'; 
-					elsif (hit1 = '1') then
-						MC_WE1 <= '1'; 
+					inc_w <= '1';
+
+				elsif  (WE = '1' and bus_TRDY = '1' and hit = '0') then
+					MC_send_data <= '1';
+					if (via_2_rpl = '0') then
+						MC_WE0 <= '1';
+					else then
+						MC_WE1 <= '1';
+					end if;
+					inc_m <= '1';
+					inc_w <= '1';
+					
 				end if;
 				last_word  <= last_word_block;
 				Frame <= '1';
