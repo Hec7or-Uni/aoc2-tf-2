@@ -130,71 +130,64 @@ palabra <= palabra_UC;
 					next_state <= Inicio;
 					ready <= '1';
 					mux_output <= '0'; --Es el valor por defecto. No hace falta ponerlo. Salida de la MC
-				elsif (Bus_grant = '0') then
-					next_state <= Direccion;
 				elsif ((RE = '1' and hit = '0') or WE = '1') then
 					Bus_req <=1;
-					next_state <= Inicio;
+					if (Bus_grant = '1') then
+						next_state <= Direccion;
+						inc_w <= WE;
+						inc_m <= not hit;
+						MC_WE0 <= hit0 and WE; 
+						MC_WE1 <= hit1 and WE;
+					else
+						next_state <= Inicio;
+					end if;
 				end if;
 
 			when Direccion =>
+				-- salidas del estado
+				MC_bus_Rd_Wr <= WE;
+				Frame <= '1';
+				MC_send_addr_ctrl <= '1';
+				block_addr <= (addr_non_cacheable = '0' and hit = '0' and RE = '1');
+				
 				-- transiciones
 				if (Bus_DevSel = '0') then
 					next_state <= Direccion;
-				elsif (Bus_DevSel = '1' and addr_non_cacheable = '0') then --asegurar que es no cacheable
-					next_state <= Inicio;
-				else then
+				elsif (Bus_DevSel = '1') then
 					next_state <= Datos;
-					--block_addr <= '0';
-					--no se de donde ha salido ¿?
 				end if;
-				-- salidas del estado
-				if (WE = '1') then 
-					MC_bus_Rd_Wr <= '1'
-				end if;
-				Frame <= '1';
-				MC_send_addr_ctrl <= '1';
-				block_addr <= '1' when addr_non_cacheable = '0' and hit = '0' and RE = '1' then '0';
 
 			when Datos =>
-				-- transiciones
-				if (last_word = '0' or bus_TRDY = '0') then
-					next_state <= Datos;
-				elsif (last_word = '1') then
-					next_state <= Inicio;
-					if(RE = '1') then
-						mux_origen <= 1; --seleciona bus
-						mux_output <= 0; --out memoria cache
-					end if;
-					ready <= '1';
-				end if;
 
 				-- salidas del estado
-				if (RE = '1' and bus_TRDY = '1') then
-					inc_m <= '1' when hit = '0' then '0';
+				if (RE = '1' and bus_TRDY = '1' and addr_non_cacheable = '0') then
+					last_word  <= last_word_block;
 					MC_tags_WE <= last_word_block;
 					mux_origen <= 1; --seleciona bus
 					mux_output <= 0; --out memoria cache
+					MC_WE0 <= not via_2_rpl;
+					MC_WE1 <= via_2_rpl;
 
-				elsif (WE = '1' and bus_TRDY = '1' and hit = '1') then
-					MC_WE0 <= hit0; 
-					MC_WE1 <= hit1;
-					MC_send_data <= '1';
-					inc_w <= '1';
-
-				elsif  (WE = '1' and bus_TRDY = '1' and hit = '0') then
-					MC_send_data <= '1';
-					if (via_2_rpl = '0') then
-						MC_WE0 <= '1';
-					else then
-						MC_WE1 <= '1';
-					end if;
-					inc_m <= '1';
-					inc_w <= '1';
+				elsif (RE = '1' and bus_TRDY = '1' and addr_non_cacheable = '1') then
+					last_word  <= 1;
+					mux_origen <= 0; --seleciona procesador
+					mux_output <= 1; --out bus
 					
+				elsif (WE = '1' and bus_TRDY = '1') then
+					MC_send_data <= '1';
+					last_word  <= 1;
+					mux_origen <= 0; --seleciona procesador
+
 				end if;
-				last_word  <= last_word_block;
 				Frame <= '1';
+				
+				-- transiciones
+				if (last_word = '0' or bus_TRDY = '0') then
+					next_state <= Datos;
+				elsif (last_word = '1' and bus_TRDY = '1') then
+					next_state <= Inicio;
+					ready <= '1';
+				end if;
 				
 		end case;
   end process;
