@@ -163,48 +163,56 @@ palabra <= palabra_UC;
 				end if;
 
 			when Datos =>
-				-- salidas del estado
-				if (RE = '1' and addr_non_cacheable = '0') then
+				Frame <= '1';
+				
+				--No cacheable
+				if (addr_non_cacheable = '1') then
 					if (bus_TRDY = '1') then
+						next_state <= Inicio; 
+					else
+						next_state <= Datos;
+					end if;
+
+					MC_send_data <= WE;
+					ready <= bus_TRDY;
+					mux_output <= bus_TRDY;
+					last_word <= bus_TRDY;
+				end if;
+
+				--Read miss cacheable
+				if (RE = '1' and hit = '0' and addr_non_cacheable = '0') then
+					count_enable <= bus_TRDY;
+					mux_origen <= bus_TRDY;
+					if (bus_TRDY = '1') then
+						if (last_word_block = '0') then 
+							next_state <= Datos;
+						else 
+							next_state <= Inicio;
+						end if;
+
+						last_word <= last_word_block;
 						MC_WE0 <= not via_2_rpl;
 						MC_WE1 <= via_2_rpl;
 						MC_tags_WE <= last_word_block;
-						count_enable <= '1';
+					else
+						next_state <= Datos;
 					end if;
-					last_word  <= last_word_block;
-					mux_origen <= '1'; --seleciona bus
-					duplw  <= last_word_block;
-					mux_output <= '0'; --out memoria cache
 
-				elsif (RE = '1' and addr_non_cacheable = '1') then
-					last_word  <= '1';
-					duplw <= '1';
-					mux_origen <= '0'; --seleciona procesador
-					mux_output <= '1'; --out bus
+				--Write cacheable
+				elsif (WE = '1' and addr_non_cacheable = '0') then
+					if (bus_TRDY = '1') then
+						next_state <= Inicio;
+					else
+						next_state <= Datos;
+					end if;
 					
-				elsif (WE = '1'and addr_non_cacheable = '0') then
-					MC_WE0 <= not via_2_rpl;
-					MC_WE1 <= via_2_rpl;
 					MC_send_data <= '1';
-					last_word  <= '1';
-					duplw <= '1';
-					mux_origen <= '0'; --seleciona procesador
-
-				elsif (WE = '1' and addr_non_cacheable = '1') then
-					MC_send_data <= '1';
-
-				end if;
-				Frame <= '1';
-				
-				-- transiciones
-				if (duplw = '1' and bus_TRDY = '1') then
-					next_state <= Inicio;
-					if addr_non_cacheable = '1' then
-						mux_output <= '1';
-					end if ;
-					-- ready <= RE or (RE and addr_non_cacheable);
-				elsif (duplw = '0' or bus_TRDY = '0') then
-					next_state <= Datos;
+					ready <= bus_TRDY; 
+					last_word <= bus_TRDY;
+					if (bus_TRDY = '1' and hit = '1') then
+						MC_WE0 <= hit0;
+						MC_WE1 <= hit1;
+					end if;
 				end if;
 		end case;
   end process;
