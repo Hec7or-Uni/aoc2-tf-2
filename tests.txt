@@ -17,7 +17,7 @@ lw 	 r22  #36  r0;#direccion conjunto 1 hit via 1
 lw 	 r21  #40  r0;#direccion conjunto 2 hit via 0
 lw 	 r20  #44  r0;#direccion conjunto 3 hit via 1
 #conjunto 1 via 1 miss(para tener ambos conjuntos apuntando a la via 0)
-lw 	 r19  #48  r0;#direccion conjunto 3 hit via 1
+lw 	 r19  #48  r0;
 #################################################
 #PRUEBAS lectura
 lw r1 #0 r31;#conjunto 0 miss via 0
