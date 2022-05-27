@@ -132,7 +132,6 @@ palabra <= palabra_UC;
 				elsif (RE = '1' and  hit = '1') then -- si piden y es acierto de lectura mandamos el dato
 					next_state <= Inicio;
 					ready <= '1';
-					mux_output <= '0'; --Es el valor por defecto. No hace falta ponerlo. Salida de la MC
 				elsif ((RE = '1' and hit = '0') or WE = '1') then
 					Bus_req <= '1';
 					if (Bus_grant = '1') then
@@ -152,7 +151,7 @@ palabra <= palabra_UC;
 				Frame <= '1';
 				MC_send_addr_ctrl <= '1';
 				
-				if (addr_non_cacheable = '0' and hit = '0' and RE = '1') then block_addr <= '1';
+				if (addr_non_cacheable = '0' and RE = '1') then block_addr <= '1';
 				else block_addr <= '0';
 				end if;
 								
@@ -164,7 +163,6 @@ palabra <= palabra_UC;
 				end if;
 
 			when Datos =>
-
 				-- salidas del estado
 				if (RE = '1' and addr_non_cacheable = '0') then
 					if (bus_TRDY = '1') then
@@ -174,8 +172,8 @@ palabra <= palabra_UC;
 						count_enable <= '1';
 					end if;
 					last_word  <= last_word_block;
-					duplw  <= last_word_block;
 					mux_origen <= '1'; --seleciona bus
+					duplw  <= last_word_block;
 					mux_output <= '0'; --out memoria cache
 
 				elsif (RE = '1' and addr_non_cacheable = '1') then
@@ -184,11 +182,16 @@ palabra <= palabra_UC;
 					mux_origen <= '0'; --seleciona procesador
 					mux_output <= '1'; --out bus
 					
-				elsif (WE = '1') then
+				elsif (WE = '1'and addr_non_cacheable = '0') then
+					MC_WE0 <= not via_2_rpl;
+					MC_WE1 <= via_2_rpl;
 					MC_send_data <= '1';
 					last_word  <= '1';
 					duplw <= '1';
 					mux_origen <= '0'; --seleciona procesador
+
+				elsif (WE = '1' and addr_non_cacheable = '1') then
+					MC_send_data <= '1';
 
 				end if;
 				Frame <= '1';
@@ -196,11 +199,13 @@ palabra <= palabra_UC;
 				-- transiciones
 				if (duplw = '1' and bus_TRDY = '1') then
 					next_state <= Inicio;
-					ready <= RE or (RE and addr_non_cacheable);
+					if addr_non_cacheable = '1' then
+						mux_output <= '1';
+					end if ;
+					-- ready <= RE or (RE and addr_non_cacheable);
 				elsif (duplw = '0' or bus_TRDY = '0') then
 					next_state <= Datos;
 				end if;
-				
 		end case;
   end process;
 end Behavioral;
