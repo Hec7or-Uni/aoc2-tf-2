@@ -113,7 +113,7 @@ palabra <= palabra_UC;
 		mux_origen <= '0';
 		MC_send_addr_ctrl <= '0';
 		MC_send_data <= '0';
-		next_state <= state;  
+		next_state <= state;
 		count_enable <= '0';
 		Frame <= '0';
 		block_addr <= '0';
@@ -166,22 +166,25 @@ palabra <= palabra_UC;
 			when Datos =>
 
 				-- salidas del estado
-				if (RE = '1' and bus_TRDY = '1' and addr_non_cacheable = '0') then
+				if (RE = '1' and addr_non_cacheable = '0') then
+					if (bus_TRDY = '1') then
+						MC_WE0 <= not via_2_rpl;
+						MC_WE1 <= via_2_rpl;
+						MC_tags_WE <= last_word_block;
+						count_enable <= '1';
+					end if;
 					last_word  <= last_word_block;
 					duplw  <= last_word_block;
-					MC_tags_WE <= last_word_block;
 					mux_origen <= '1'; --seleciona bus
 					mux_output <= '0'; --out memoria cache
-					MC_WE0 <= not via_2_rpl;
-					MC_WE1 <= via_2_rpl;
 
-				elsif (RE = '1' and bus_TRDY = '1' and addr_non_cacheable = '1') then
+				elsif (RE = '1' and addr_non_cacheable = '1') then
 					last_word  <= '1';
 					duplw <= '1';
 					mux_origen <= '0'; --seleciona procesador
 					mux_output <= '1'; --out bus
 					
-				elsif (WE = '1' and bus_TRDY = '1') then
+				elsif (WE = '1') then
 					MC_send_data <= '1';
 					last_word  <= '1';
 					duplw <= '1';
@@ -191,11 +194,11 @@ palabra <= palabra_UC;
 				Frame <= '1';
 				
 				-- transiciones
-				if (duplw = '0' or bus_TRDY = '0') then
-					next_state <= Datos;
-				elsif (duplw = '1' and bus_TRDY = '1') then
+				if (duplw = '1' and bus_TRDY = '1') then
 					next_state <= Inicio;
-					ready <= '1';
+					ready <= RE or (RE and addr_non_cacheable);
+				elsif (duplw = '0' or bus_TRDY = '0') then
+					next_state <= Datos;
 				end if;
 				
 		end case;
