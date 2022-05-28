@@ -10,24 +10,25 @@
   ARCHITECTURE behavior OF testbench IS 
 
   -- Component Declaration
-          COMPONENT MIPs_segmentado is
-			 Port ( clk : in  STD_LOGIC;
-					  reset : in  STD_LOGIC;
-						IO_input: in STD_LOGIC_VECTOR (31 downto 0);
-					  output : out  STD_LOGIC_VECTOR (31 downto 0));
-			END COMPONENT;
+   COMPONENT MIPs_segmentado is
+      Port ( clk : in  STD_LOGIC;
+      reset : in  STD_LOGIC;
+      --Nuevo
+         IO_input: in STD_LOGIC_VECTOR (31 downto 0);
+            output : out  STD_LOGIC_VECTOR (31 downto 0));
+   END COMPONENT;
 
-          SIGNAL clk, reset :  std_logic;
-          SIGNAL output, IO_input :  std_logic_vector(31 downto 0);
+   SIGNAL clk, reset :  std_logic;
+   SIGNAL output, IO_input :  std_logic_vector(31 downto 0);
           
   -- Clock period definitions
    constant CLK_period : time := 10 ns;
-	
-  BEGIN
-	IO_input <= x"00ABCDEF";
+   BEGIN
+      IO_input <= x"00ABCDEF";
+
   -- Component Instantiation
-   uut: MIPs_segmentado PORT MAP(clk => clk, reset => reset, IO_input=>IO_input, output => output);
-	
+   uut: MIPs_segmentado PORT MAP(clk => clk, reset => reset, IO_input => IO_input, output => output);
+
 -- Clock process definitions
    CLK_process :process
    begin

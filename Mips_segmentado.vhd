@@ -13,10 +13,10 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 entity MIPs_segmentado is
-    Port (clk : in  STD_LOGIC;
-          reset : in  STD_LOGIC;
-		  IO_input: in STD_LOGIC_VECTOR (31 downto 0);
-		  output : out  STD_LOGIC_VECTOR (31 downto 0));
+    Port ( clk : in  STD_LOGIC;
+           reset : in  STD_LOGIC;
+					 IO_input: in STD_LOGIC_VECTOR (31 downto 0);
+			  output : out  STD_LOGIC_VECTOR (31 downto 0));
 end MIPs_segmentado;
 
 architecture Behavioral of MIPs_segmentado is
@@ -55,12 +55,12 @@ component MD_mas_MC is port (
 	CLK : in std_logic;
 	reset: in std_logic; 
 	ADDR : in std_logic_vector (31 downto 0); --Dir solicitada por el Mips
-	Din : in std_logic_vector (31 downto 0);	--entrada de datos desde el Mips
-	WE : in std_logic;	-- write enable	del MIPS
-	RE : in std_logic;	-- read enable del MIPS	
-	IO_input: in std_logic_vector (31 downto 0);	--dato que viene de una entrada del sistema
-	Mem_ready: out std_logic;	-- indica si podemos hacer la operación solicitada en el ciclo actual
-	Dout : out std_logic_vector (31 downto 0)	--dato que se envía al Mips
+	Din : in std_logic_vector (31 downto 0);--entrada de datos desde el Mips
+	WE : in std_logic;		-- write enable	del MIPS
+	RE : in std_logic;		-- read enable del MIPS	
+	IO_input: in std_logic_vector (31 downto 0); --dato que viene de una entrada del sistema
+	Mem_ready: out std_logic; -- indica si podemos hacer la operación solicitada en el ciclo actual
+	Dout : out std_logic_vector (31 downto 0) --dato que se envía al Mips
 		  ); 
 end component;
 
@@ -347,37 +347,32 @@ signal load_EX_FP : std_logic;
 signal Kill_IF, Parar_ID, Parar_EX_FP, load_IF_ID, PEFP, PID, KIF : std_logic;
 signal IR_KILL: std_logic_vector(31 downto 0);
 signal paradas_control, paradas_datos, paradas_fp, ciclos: std_logic_vector(7 downto 0);
-signal Mem_ready : std_logic;
+signal Mem_ready, load_mem_ready : std_logic;
+signal RegWrite_MEM1 : std_logic;
+signal RegWrite_WB1 : std_logic;
+signal RegWrite_FP_MEM1 : std_logic;
+signal RegWrite_FP_WB1 : std_logic;
 signal paradas_mem: std_logic_vector(7 downto 0); 
 signal inc_paradas_mem : std_logic; 
-
-signal RegWrite_EX1 : std_logic; 
-signal RegWrite_FP_EX1 : std_logic; 
-signal RegWrite_MEM1 : std_logic; 
-signal RegWrite_FP_MEM1 : std_logic; 
-signal RegWrite_WB1 : std_logic; 
-signal RegWrite_FP_WB1 : std_logic; 
-
 begin
 count_clk: counter port map (clk => clk, reset => reset, count_enable => '1', load => '0', D_in => "00000000", count => ciclos);
 
 KIF 	<= '1' when Kill_IF = '1' and parar_ID = '0' and parar_EX_FP = '0' else '0';
 PID 	<= '1' when parar_ID = '1' and parar_EX_FP = '0' else '0';
 PEFP	<= '1' when parar_EX_FP = '1' else '0';
-inc_paradas_mem <= not Mem_ready;
+inc_paradas_mem  	<= '1' when Mem_ready = '0' else '0';
 
 count_paradas: counter port map (clk => clk, reset => reset, count_enable => KIF, load => '0', D_in => "00000000", count => paradas_control);
 count_datos: counter port map (clk => clk, reset => reset, count_enable => PID, load => '0', D_in => "00000000", count => paradas_datos);
 count_fp: counter port map (clk => clk, reset => reset, count_enable => PEFP, load => '0', D_in => "00000000", count => paradas_fp);
 cont_paradas_memoria: counter port map (clk => clk, reset => reset, count_enable => inc_paradas_mem , load=> '0', D_in => "00000000", count => paradas_mem);
 
-
 pc: reg32 port map ( Din => PC_in, clk => clk, reset => reset, load => load_PC, Dout => PC_out );
 ------------------------------------------------------------------------------------
 -- vale '1' porque en esta versión base el procesador no para nunca
 -- Si queremos detener una instrucción en la etapa fetch habrá que ponerlo a '0'
 -- load_PC <= '1';
-load_PC <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else '1';
+load_PC <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '1' else '1';
 ------------------------------------------------------------------------------------
 four <= "00000000000000000000000000000100";
 cero <= "00000000000000000000000000000000";
@@ -391,7 +386,7 @@ muxPC: mux2_1 port map (Din0 => PC4, DIn1 => Dirsalto_ID, ctrl => PCSrc, Dout =>
 Mem_I: memoriaRAM_I PORT MAP (CLK => CLK, ADDR => PC_out, Din => cero, WE => '0', RE => '1', Dout => IR_in);
 ------------------------------------------------------------------------------------
 -- el load vale uno porque este procesador no para nunca. Si queremos que una instrucción no avance habrá que poner el load a '0'
-load_IF_ID <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else '1';
+load_IF_ID <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '1' else '1';
 IR_KILL <= cero when Kill_IF = '1' else IR_in;
 Banco_IF_ID: Banco_ID port map ( IR_in => IR_KILL, PC4_in => PC4, clk => clk, reset => reset, load => load_IF_ID, IR_ID => IR_ID, PC4_ID => PC4_ID);
 ------------------------------------------Etapa ID-------------------------------------------------------------------
@@ -401,9 +396,9 @@ Reg_Rt_ID <= IR_ID(20 downto 16);
 -- BANCOS DE REGISTROS
 -- En esta versión del MIPS hay dos bancos de registros. Los dos con las mismas entradas en los puertos de lectura, pero distintas en el de escritura.
 -- Banco de registros de enteros
-INT_Register_bank: BReg PORT MAP (clk => clk, reset => reset, RA => Reg_Rs_ID, RB => Reg_Rt_ID, RW => RW_WB, BusW => BusW, RegWrite => RegWrite_WB, BusA => BusA, BusB => BusB);
+INT_Register_bank: BReg PORT MAP (clk => clk, reset => reset, RA => Reg_Rs_ID, RB => Reg_Rt_ID, RW => RW_WB, BusW => BusW, RegWrite => RegWrite_WB1, BusA => BusA, BusB => BusB);
 -- Banco de registros de FP									
-FP_Register_bank: BReg PORT MAP (clk => clk, reset => reset, RA => Reg_Rs_ID, RB => Reg_Rt_ID, RW => RW_FP_WB, BusW => BusW_FP, RegWrite => RegWrite_FP_WB, BusA => BusA_FP, BusB => BusB_FP);
+FP_Register_bank: BReg PORT MAP (clk => clk, reset => reset, RA => Reg_Rs_ID, RB => Reg_Rt_ID, RW => RW_FP_WB, BusW => BusW_FP, RegWrite => RegWrite_FP_WB1, BusA => BusA_FP, BusB => BusB_FP);
 
 -------------------------------------------------------------------------------------
 sign_ext: Ext_signo port map (inm => IR_ID(15 downto 0), inm_ext => inm_ext);
@@ -436,17 +431,11 @@ UC_seg: UC port map (IR_op_code => IR_op_code, Branch => Branch, RegDst => RegDs
 -- Pero este MIPS base no para: tenéis que cambiarlo al completar y conectar la UD.
 -- Os dejamos una pista en este código
 
-RegWrite_FP_ID	<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else RegWrite_FP;
-RegWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else RegWrite;
-FP_add_ID				<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else FP_add;
-MemWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else MemWrite;
-MemRead_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '0' else MemRead;
-RegWrite_EX1		<= '0' when Mem_ready = '0' else RegWrite_EX;
-RegWrite_FP_EX1		<= '0' when Mem_ready = '0' else RegWrite_FP_EX;
-RegWrite_MEM1		<= '0' when Mem_ready = '0' else RegWrite_MEM;
-RegWrite_FP_MEM1	<= '0' when Mem_ready = '0' else RegWrite_FP_MEM;
-RegWrite_WB1		<= '0' when Mem_ready = '0' else RegWrite_WB;
-RegWrite_FP_WB1		<= '0' when Mem_ready = '0' else RegWrite_FP_WB;
+RegWrite_FP_ID	<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else RegWrite_FP;
+RegWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else RegWrite;
+FP_add_ID				<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else FP_add;
+MemWrite_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else MemWrite;
+MemRead_ID			<= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else MemRead;
 -------------------------------------------------------------------------------------
 -- Si es una instrucción de salto y se activa la señal Z se carga la dirección de salto, sino PC+4 	
 PCSrc <= Branch AND Z; 				
@@ -468,7 +457,7 @@ Banco_ID_EX: Banco_EX PORT MAP ( 	clk => clk, reset => reset, load => load_EX_FP
 					Reg_Rt_ID => IR_ID(20 downto 16), Reg_Rd_ID => IR_ID(15 downto 11), Reg_Rt_EX => Reg_Rt_EX, Reg_Rd_EX => Reg_Rd_EX);		
 -- Extensión banco ID/EX para FP
 Banco_ID_EX_FP: Banco_EX_FP PORT MAP ( 	clk => clk, reset => reset, load => load_EX_FP, 
-					RegWrite_FP_ID => RegWrite_FP_ID, RegWrite_FP_EX => RegWrite_FP_EX1,
+					RegWrite_FP_ID => RegWrite_FP_ID, RegWrite_FP_EX => RegWrite_FP_EX,
 					FP_add_ID => FP_add_ID, FP_add_EX => FP_add_EX,
 					FP_mem_ID => FP_mem, FP_mem_EX => FP_mem_EX,
 					busA_FP => busA_FP, busB_FP => busB_FP, busA_FP_EX => busA_FP_EX, busB_FP_EX => busB_FP_EX,	
@@ -477,7 +466,7 @@ Banco_ID_EX_FP: Banco_EX_FP PORT MAP ( 	clk => clk, reset => reset, load => load
 					Reg_Rt_FP_ID => IR_ID(20 downto 16), Reg_Rt_FP_EX => Reg_Rt_FP_EX,
 					RegDst_ID => RegDst_ID, RegDst_FP_EX => RegDst_FP_EX);		
 
-load_EX_FP <= '0' when Parar_EX_FP = '1' or Mem_ready = '0' else '1';
+load_EX_FP <= '0' when Parar_EX_FP = '1' or Mem_ready = '1' else '1';
 ------------------------------------------Etapa EX-------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 -- Unidad de anticipación de enteros incompleta. Ahora mismo selecciona siempre la entrada 0
@@ -517,8 +506,8 @@ mux_dst_FP: mux2_5bits port map (Din0 => Reg_Rt_FP_EX, DIn1 => Reg_Rd_FP_EX, ctr
 
 
 Banco_EX_MEM: Banco_MEM PORT MAP ( ALU_out_EX => ALU_out_EX, ALU_out_MEM => ALU_out_MEM, clk => clk, reset => reset, load => '1', MemWrite_EX => MemWrite_EX,
-		MemRead_EX => MemRead_EX, MemtoReg_EX => MemtoReg_EX, RegWrite_EX => RegWrite_EX1, MemWrite_MEM => MemWrite_MEM, MemRead_MEM => MemRead_MEM,
-		MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM1, 
+		MemRead_EX => MemRead_EX, MemtoReg_EX => MemtoReg_EX, RegWrite_EX => RegWrite_EX, MemWrite_MEM => MemWrite_MEM, MemRead_MEM => MemRead_MEM,
+		MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM, 
 	-- Si metemos cortos lo que hay que guardar aquí no es el registro B, sino la salida de la red de cortos
 	-- Además hay dos RBs, hay que elegir el que toque con el mux que usa FP_mem
 	BusB_EX => BusB_4_MD,
@@ -527,7 +516,7 @@ Banco_EX_MEM: Banco_MEM PORT MAP ( ALU_out_EX => ALU_out_EX, ALU_out_MEM => ALU_
 --Extensión para instrucciones de FP
 
 Banco_EX_FP_MEM: Banco_MEM_FP PORT MAP ( 	ADD_FP_out => ADD_FP_out, ADD_FP_out_MEM => ADD_FP_out_MEM, clk => clk, reset => reset, load => '1', 
-						RegWrite_FP_EX => RegWrite_FP_EX_mux_out, RegWrite_FP_MEM => RegWrite_FP_MEM1, 
+						RegWrite_FP_EX => RegWrite_FP_EX_mux_out, RegWrite_FP_MEM => RegWrite_FP_MEM, 
 						FP_mem_EX => FP_mem_EX, FP_mem_MEM => FP_mem_MEM,
 						RW_FP_EX => RW_FP_EX, RW_FP_MEM => RW_FP_MEM);
 
@@ -537,27 +526,32 @@ RegWrite_FP_EX_mux_out <= '0' when Parar_EX_FP = '1' else RegWrite_FP_EX;
 
 Mem_D: MD_mas_MC PORT MAP (CLK => CLK, ADDR => ALU_out_MEM, Din => BusB_MEM, WE => MemWrite_MEM, RE => MemRead_MEM, reset => reset, IO_input => IO_input, Mem_ready => Mem_ready, Dout => Mem_out);
 
+
 Banco_MEM_WB: Banco_WB PORT MAP ( ALU_out_MEM => ALU_out_MEM, ALU_out_WB => ALU_out_WB, Mem_out => Mem_out, MDR => MDR, clk => clk, reset => reset, 
-				load => '1', 
-				MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM1, MemtoReg_WB => MemtoReg_WB, RegWrite_WB => RegWrite_WB1, 
+				load => load_mem_ready, 
+				MemtoReg_MEM => MemtoReg_MEM, RegWrite_MEM => RegWrite_MEM, MemtoReg_WB => MemtoReg_WB, RegWrite_WB => RegWrite_WB1, 
 				RW_MEM => RW_MEM, RW_WB => RW_WB );
 
 --
 Banco_MEM_WB_FP: Banco_WB_FP PORT MAP ( 	ADD_FP_out_MEM	=> ADD_FP_out_MEM, 
 						ADD_FP_out_WB	=> ADD_FP_out_WB, 
-						clk => clk, reset => reset, load => '1', 
-						RegWrite_FP_MEM => RegWrite_FP_MEM1, 
+						clk => clk, reset => reset, load => load_mem_ready, 
+						RegWrite_FP_MEM => RegWrite_FP_MEM, 
 						RegWrite_FP_WB => RegWrite_FP_WB1,
 						FP_mem_MEM => FP_mem_MEM, 
 						FP_mem_WB => FP_mem_WB, 
 						RW_FP_MEM => RW_FP_MEM, 
 						RW_FP_WB => RW_FP_WB);
+
+load_mem_ready <= Mem_ready;
 ------------------------------------------Etapa WB-------------------------------------------------------------------
 
 mux_busW: mux2_1 port map (Din0 => ALU_out_WB, DIn1 => MDR, ctrl => MemtoReg_WB, Dout => busW);
 -- Mux MemtoReg para el banco FP
 mux_busW_FP: mux2_1 port map (Din0 => ADD_FP_out_WB, DIn1 => MDR, ctrl => FP_mem_WB, Dout => busW_FP);
 
+RegWrite_WB1		<= '0' when Mem_ready = '0' else RegWrite_WB;
+RegWrite_FP_WB1		<= '0' when Mem_ready = '0' else RegWrite_FP_WB;
 -----------
 -- output no se usa para nada. Está puesto para que el sistema tenga alguna salida al exterior.
 output <= IR_ID;
