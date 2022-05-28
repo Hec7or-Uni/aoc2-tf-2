@@ -386,7 +386,7 @@ muxPC: mux2_1 port map (Din0 => PC4, DIn1 => Dirsalto_ID, ctrl => PCSrc, Dout =>
 Mem_I: memoriaRAM_I PORT MAP (CLK => CLK, ADDR => PC_out, Din => cero, WE => '0', RE => '1', Dout => IR_in);
 ------------------------------------------------------------------------------------
 -- el load vale uno porque este procesador no para nunca. Si queremos que una instrucción no avance habrá que poner el load a '0'
-load_IF_ID <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' or Mem_ready = '1' else '1';
+load_IF_ID <= '0' when Parar_ID = '1' or Parar_EX_FP = '1' else '1';
 IR_KILL <= cero when Kill_IF = '1' else IR_in;
 Banco_IF_ID: Banco_ID port map ( IR_in => IR_KILL, PC4_in => PC4, clk => clk, reset => reset, load => load_IF_ID, IR_ID => IR_ID, PC4_ID => PC4_ID);
 ------------------------------------------Etapa ID-------------------------------------------------------------------
