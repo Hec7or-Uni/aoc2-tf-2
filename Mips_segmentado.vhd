@@ -354,10 +354,10 @@ signal inc_paradas_mem : std_logic;
 begin
 count_clk: counter port map (clk => clk, reset => reset, count_enable => '1', load => '0', D_in => "00000000", count => ciclos);
 
-KIF 	<= '1' when Kill_IF = '1' and parar_ID = '0' and parar_EX_FP = '0' else '0';
-PID 	<= '1' when parar_ID = '1' and parar_EX_FP = '0' else '0';
-PEFP	<= '1' when parar_EX_FP = '1' else '0';
-inc_paradas_mem  	<= '1' when Mem_ready = '0' else '0';
+KIF 	<= '1' when Kill_IF = '1' and parar_ID = '0' and parar_EX_FP = '0' and Mem_ready = '1' else '0';
+PID 	<= '1' when parar_ID = '1' and parar_EX_FP = '0' and Mem_ready = '1' else '0';
+PEFP	<= '1' when parar_EX_FP = '1' and Mem_ready = '1' else '0';
+inc_paradas_mem  <= '1' when Mem_ready = '0' else '0';
 
 count_paradas: counter port map (clk => clk, reset => reset, count_enable => KIF, load => '0', D_in => "00000000", count => paradas_control);
 count_datos: counter port map (clk => clk, reset => reset, count_enable => PID, load => '0', D_in => "00000000", count => paradas_datos);
