@@ -76,7 +76,6 @@ signal one_word: STD_LOGIC; --se activa cuando s�lo se quiere transferir una p
 signal count_enable: STD_LOGIC; -- se activa si se ha recibido una palabra de un bloque para que se incremente el contador de palabras
 signal hit: std_logic;
 signal palabra_UC : STD_LOGIC_VECTOR (1 downto 0);
-signal duplw: std_logic;
 begin
 
 
@@ -123,7 +122,6 @@ palabra <= palabra_UC;
 		one_word <= '0';
 		mux_output <= '0';
 		last_word <= '0';
-		duplw <= '0';
 		case state is
 			when Inicio =>-- Estado Inicio  
 				if (RE = '0' and WE = '0') then -- si no piden nada no hacemos nada
