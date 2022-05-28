@@ -1,0 +1,72 @@
+#cargamos los registros con las direcciones de memoria a probar cargar direcciones para misses lectura
+#################################################
+#conjunto 0 via 0 miss
+lw 	 r31  #0  r0;#direccion conjunto 0 miss via 0
+lw 	 r30  #4  r0;#direccion conjunto 1 miss via 0
+lw 	 r29  #8  r0;#direccion conjunto 2 miss via 0
+lw 	 r28  #12  r0;#direccion conjunto 3 miss via 0
+#conjunto 0 via 1 miss
+lw 	 r27  #16  r0;#direccion conjunto 0 miss via 1
+lw 	 r26  #20  r0;#direccion conjunto 1 miss via 1
+lw 	 r25  #24  r0;#direccion conjunto 2 miss via 1
+lw 	 r24  #28  r0;#direccion conjunto 3 miss via 1
+#conjunto 1 via 0 miss
+#cargar direcciones para hits de lectura
+lw 	 r23  #32  r0;#direccion conjunto 0 hit via 0
+lw 	 r22  #36  r0;#direccion conjunto 1 hit via 1
+lw 	 r21  #40  r0;#direccion conjunto 2 hit via 0
+lw 	 r20  #44  r0;#direccion conjunto 3 hit via 1
+#conjunto 1 via 1 miss(para tener ambos conjuntos apuntando a la via 0)
+lw 	 r19  #48  r0;
+#################################################
+#PRUEBAS lectura
+lw r1 #0 r31;#conjunto 0 miss via 0
+lw r1 #0 r30;#conjunto 1 miss via 0
+lw r1 #0 r29;#conjunto 2 miss via 0
+lw r1 #0 r28;#conjunto 3 miss via 0
+lw r1 #0 r27;#conjunto 0 miss via 1
+lw r1 #0 r26;#conjunto 1 miss via 1
+lw r1 #0 r25;#conjunto 2 miss via 1
+lw r1 #0 r24;#conjunto 3 miss via 1
+lw r1 #0 r23;#conjunto 0 hit via 0
+lw r1 #0 r22;#conjunto 1 hit via 1
+lw r1 #0 r21;#conjunto 2 hit via 0
+lw r1 #0 r20;#conjunto 3 hit via 1
+#################################################
+#PRUEBAS escritura hits
+sw r0 #0 r31;#conjunto 0 hit via 0
+sw r0 #0 r30;#conjunto 1 hit via 0
+sw r0 #0 r29;#conjunto 2 hit via 0
+sw r0 #0 r28;#conjunto 3 hit via 0
+sw r0 #0 r27;#conjunto 0 hit via 1
+sw r0 #0 r26;#conjunto 1 hit via 1
+sw r0 #0 r25;#conjunto 2 hit via 1
+sw r0 #0 r24;#conjunto 3 hit via 1
+#PRUEBAS escritura misses
+sw r0 #16 r31;#conjunto 0 miss via 0
+sw r0 #16 r30;#conjunto 1 miss via 0
+sw r0 #16 r29;#conjunto 2 miss via 0
+sw r0 #16 r28;#conjunto 3 miss via 0
+sw r0 #16 r27;#conjunto 0 miss via 1
+sw r0 #16 r26;#conjunto 1 miss via 1
+sw r0 #16 r25;#conjunto 2 miss via 1
+sw r0 #16 r24;#conjunto 3 miss via 1
+#################################################
+
+
+signal RAM : RamType := (  X"00100000", X"00100010", X"00100020", X"00100030", X"00110000", X"00110010", X"00110020", X"00110030", -- posiciones 0,1,2,3,4,5,6,7
+									X"00100000", X"00110010", X"00100020", X"00110030", X"00000000", X"00000000", X"00000000", X"00000000", --posicones 8,9,...
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000",
+									X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000", X"00000000");
